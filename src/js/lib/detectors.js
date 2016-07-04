@@ -36,6 +36,8 @@
 
 	var
 		lodash = require('lodash'),
+    Fingerprint2 = require('fingerprintjs2'),
+    Promise = require('es6-promise').Promise,
 		murmurhash3_32_gc = require('murmurhash').v3,
 		tz = require('jstimezonedetect').jstz.determine(),
 		cookie = require('browser-cookie-lite'),
@@ -45,7 +47,8 @@
 		windowAlias = window,
 		navigatorAlias = navigator,
 		screenAlias = screen,
-		documentAlias = document;
+		documentAlias = document,
+    cacheSignature = null;
 
 	/*
 	 * Checks whether sessionStorage is available, in a way that
@@ -111,32 +114,22 @@
 	 * Does not require any external resources.
 	 * Based on https://github.com/carlo/jquery-browser-fingerprint
 	 * @return {number} 32-bit positive integer hash
+   * NOTE the method is a promise version
 	 */
-	object.detectSignature = function(hashSeed) {
+	object.detectSignature = function() {
+    if (cacheSignature) return Promise.resolve(cacheSignature);
 
-		var fingerprint = [
-			navigatorAlias.userAgent,
-			[ screenAlias.height, screenAlias.width, screenAlias.colorDepth ].join("x"),
-			( new Date() ).getTimezoneOffset(),
-			object.hasSessionStorage(),
-			object.hasLocalStorage()
-		];
+    return new Promise(function(resolve) {
 
-		var plugins = [];
-		if (navigatorAlias.plugins)
-		{
-			for(var i = 0; i < navigatorAlias.plugins.length; i++)
-			{
-				if (navigatorAlias.plugins[i]) {
-					var mt = [];
-					for(var j = 0; j < navigatorAlias.plugins[i].length; j++) {
-						mt.push([navigatorAlias.plugins[i][j].type, navigatorAlias.plugins[i][j].suffixes]);
-					}
-					plugins.push([navigatorAlias.plugins[i].name + "::" + navigatorAlias.plugins[i].description, mt.join("~")]);
-				}
-			}
-		}
-		return murmurhash3_32_gc(fingerprint.join("###") + "###" + plugins.sort().join(";"), hashSeed);
+      new Fingerprint2().get(function(result, components){
+        /*
+         * result will use all available fingerprinting sources
+         * components is an array of all fingerprinting components used
+         */
+        cacheSignature = { result: result, components: components };
+        resolve(cacheSignature);
+      });
+    });
 	};
 
 	/*

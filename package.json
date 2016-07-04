@@ -19,6 +19,8 @@
     "uuid": "^2.0.1"
   },
   "dependencies": {
+    "es6-promise": "^3.2.1",
+    "fingerprintjs2": "^1.4.0",
     "lodash": "^3.10.1"
   },
   "contributors": [

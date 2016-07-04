@@ -29,3 +29,7 @@ aws.json
 # Vagrant
 .vagrant
 VERSION
+
+# vim cache files
+*.swp
+*.swo

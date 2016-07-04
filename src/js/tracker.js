@@ -47,6 +47,7 @@
 		requestQueue = require('./out_queue'),
 		coreConstructor = require('snowplow-tracker-core'),
 		uuid = require('uuid'),
+    Promise = require('es6-promise').Promise,
 
 		object = typeof exports !== 'undefined' ? exports : this; // For eventual node.js environment support
 
@@ -93,8 +94,10 @@
 		var
 			// Tracker core
 			core = coreConstructor(true, function(payload) {
-				addBrowserData(payload);
-				sendRequest(payload, configTrackerPause);
+        detectors.detectSignature().then(function(data) {
+          addBrowserData(payload, data.result);
+          sendRequest(payload, configTrackerPause);
+        })
 			}),
 
 			// Aliases
@@ -114,6 +117,9 @@
 
 			// Request method is always GET for Snowplow
 			configRequestMethod = 'GET',
+
+      // Visitor fingerprint
+      userFingerprint = Promise.resolve({result: '', components: null}),
 
 			// Platform defaults to web for this tracker
 			configPlatform = argmap.hasOwnProperty('platform') ? argmap.platform : 'web',
@@ -194,9 +200,6 @@
 
 			// Browser features via client-side data collection
 			browserFeatures = detectors.detectBrowserFeatures(configUseCookies, getSnowplowCookieName('testcookie')),
-
-			// Visitor fingerprint
-			userFingerprint = (argmap.userFingerprint === false) ? '' : detectors.detectSignature(configUserFingerprintHashSeed),
 
 			// Unique ID for the tracker instance used to mark links which are being tracked
 			trackerId = functionName + '_' + namespace,
@@ -641,7 +644,7 @@
 		 * (resolution, url, referrer, etc.)
 		 * Also sets the required cookies.
 		 */
-		function addBrowserData(sb) {
+		function addBrowserData(sb, fingerprint) {
 			var nowTs = Math.round(new Date().getTime() / 1000),
 				idname = getSnowplowCookieName('id'),
 				sesname = getSnowplowCookieName('ses'),
@@ -691,8 +694,10 @@
 			sb.add('vid', memorizedVisitCount);
 			sb.add('sid', memorizedSessionId);
 			sb.add('duid', _domainUserId); // Set to our local variable
-			sb.add('fp', userFingerprint);
+			sb.add('fp', fingerprint);
 			sb.add('uid', businessUserId);
+
+
 
 			refreshUrl();
 
@@ -1377,7 +1382,13 @@
 			 * @return string The user fingerprint
 			 */
 			getUserFingerprint: function () {
-				return userFingerprint;
+        var result = Promise.resolve({result: '', components: null});
+
+        if (argmap.userFingerprintSeed !== false) {
+          result = detectors.detectSignature();
+        }
+
+        return result;
 			},
 
 			/**
@@ -1485,7 +1496,6 @@
 			setUserFingerprintSeed: function(seed) {
 				helpers.warn('setUserFingerprintSeed is deprecated. Instead add a "userFingerprintSeed" field to the argmap argument of newTracker.');
 				configUserFingerprintHashSeed = seed;
-				userFingerprint = detectors.detectSignature(configUserFingerprintHashSeed);
 			},
 
 			/**
@@ -1493,9 +1503,9 @@
 			* @param bool enable If false, turn off user fingerprinting
 			*/
 			enableUserFingerprint: function(enable) {
-			helpers.warn('enableUserFingerprintSeed is deprecated. Instead add a "userFingerprint" field to the argmap argument of newTracker.');
+        helpers.warn('enableUserFingerprintSeed is deprecated. Instead add a "userFingerprint" field to the argmap argument of newTracker.');
 				if (!enable) {
-					userFingerprint = '';
+					userFingerprint = Promise.resolve({result: '', components: null});
 				}
 			},
 
