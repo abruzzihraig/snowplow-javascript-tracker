@@ -36,7 +36,7 @@
 
 	var
 		lodash = require('lodash'),
-    Fingerprint2 = require('fingerprintjs2'),
+    Fingerprint2 = require('./fingerprintjs2'), // use the version from Kaveh
     Promise = require('es6-promise').Promise,
 		murmurhash3_32_gc = require('murmurhash').v3,
 		tz = require('jstimezonedetect').jstz.determine(),
@@ -121,7 +121,7 @@
 
     return new Promise(function(resolve) {
 
-      new Fingerprint2().get(function(result, components){
+      new Fingerprint2({ excludeCanvas: true }).get(function(result, components){
         /*
          * result will use all available fingerprinting sources
          * components is an array of all fingerprinting components used
